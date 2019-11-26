@@ -1,0 +1,8 @@
+body {
+  padding: 10px;
+  font-family: sans-serif;
+}
+
+.video-react .video-react-poster {
+  background-size: unset !important;
+}

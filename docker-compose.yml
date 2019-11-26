@@ -1,0 +1,58 @@
+version: '3'
+services:
+  node:
+    image: aeternity/aeternity:v5.1.0
+    hostname: node
+    environment:
+      EPOCH_CONFIG: /home/epoch/epoch.yaml
+    command: >
+       bin/aeternity console -noinput -aehttp enable_debug_endpoints true
+    volumes:
+      - ./docker/aeternity_node_mean15.yaml:/home/epoch/epoch.yaml
+      - ./docker/keys/node:/home/epoch/node/keys
+      - node_db:/home/epoch/node/data/mnesia
+    ports:
+      - "3013:3013"
+      - "3014:3014"
+      - "3113:3113"
+    expose: [3013, 3014, 3113]
+  
+  middleware:
+    image: aepp-middleware_middleware:latest
+    ports:
+      - "8080:80"
+      - "3020:3020"
+    entrypoint: ./docker/wait-for-it.sh node:3013 -- ./aepp-middleware -p -s -w
+    environment:
+      - NODE_URL=node:3013
+      - AESOPHIA_URL=compiler:3080
+      - DATABASE_URL=postgres://middleware:middleware@db/middleware
+    volumes:
+      - ${PWD}/docker/wait-for-it.sh:/app/docker/wait-for-it.sh
+    depends_on:
+      - db
+      - node
+      - compiler
+  
+  db:
+    image: postgres:11
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=middleware
+      - POSTGRES_PASSWORD=middleware
+      - POSTGRES_DB=middleware
+    volumes: 
+      - ae-mdw-postgres-volume:/var/lib/postgresql/data
+    expose: [5432]
+
+  compiler:
+    image: aeternity/aesophia_http:v4.0.0
+    hostname: compiler
+    expose: [3080]
+
+volumes:
+  ae-mdw-postgres-volume:
+    external: false
+  node_db:
+  node_keys:
+    
